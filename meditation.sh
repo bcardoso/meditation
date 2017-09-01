@@ -1,5 +1,5 @@
 #!/bin/bash
-### meditation.sh 0.5 ~ timer para meditação
+### meditation.sh 0.6 ~ timer para meditação
 ### bcardoso @ 2010-2017
 
 ### EXEMPLOS DE USO
@@ -11,11 +11,12 @@
 # ./meditation.sh -set      [rotina de tempos pré-definida]
 
 ### CHANGELOG
-# 2016-11-27 v0.5: revisão estrutural do código; suprimidas variações da opção '-set'(atualmente apenas um set padrão definido em $SET_TIMES)
-# 2016-10-01 v0.4: opção '-r $2' cria loop de '$2'm com intervalos de 5m
-# 2016-06-29 v0.3: opção '-set' com uma série de intervalos de 4 horas.
-# 2015-02-23 v0.2: opção de usar vários tempos como argumentos.
-# 2010-07-24 v0.1: primeira versão
+# 2017-09-01 v0.6: opção -r aceita valores no formato x/y;
+# 2016-11-27 v0.5: revisão estrutural do código; suprimidas variações da opção '-set'(atualmente apenas um set padrão definido em $SET_TIMES);
+# 2016-10-01 v0.4: opção '-r $2' cria loop de '$2'm com intervalos de 5m;
+# 2016-06-29 v0.3: opção '-set' com uma série de intervalos de 4 horas;
+# 2015-02-23 v0.2: opção de usar vários tempos como argumentos;
+# 2010-07-24 v0.1: primeira versão.
 
 
 #============================================================================#
@@ -38,6 +39,7 @@ PLAYER="mplayer -really-quiet -volume 90"
 
 # intervalo padrão em minutos
 DEFAULT=23
+DEFAULT_PAUSE=5
 
 # rotina pré-definida para opção -set
 SET_TIMES="25 5 55 5" # ~1h30 focus work (20% of 8h/work-day)
@@ -52,8 +54,7 @@ check_time () {
 	if [ $1 -gt 0 2> /dev/null ] ; then
 		TEMPO=$1
 	else # argumento é igual a zero ou não é um número
-		echo "Erro: \"$1\" é um argumento inválido."
-		echo "Intervalo definido para $DEFAULT minutos."
+		echo -e "Erro: \"$1\" é inválido. Definindo para $DEFAULT min.\n"
 		TEMPO=$DEFAULT
 	fi
 }
@@ -86,29 +87,31 @@ case $1 in
 		;;
 
 	
-	-r) # REPETE um ciclo X/Y. ex: -r 23/5
+	-r) # REPETE um ciclo X/Y. ex: -r 23/5 [ou] -r 50
 		shift
+		
+		# interpreta valores no formato x/y
 		if [[ $1 == *"/"* ]]; then
 			X=$(echo $1 | cut -d"/" -f1)
 			Y=$(echo $1 | cut -d"/" -f2)
+
+		# ou somente o valor principal
 		else
-			X=$1
-			Y=5
+			X=$DEFAULT
+			[ ! -z $1 ] && X=$1
+			Y=$DEFAULT_PAUSE
 		fi
 
-		# inicia a repetição do set
-		echo -e "\nSET: ${X}m/${Y}m (oo)"
+		# inicia a repetição contínua do set
+		echo -e "\nSET: ${X}m/${Y}m ∞ (^C para sair)\n"
 		while :; do
-			echo -ne "\n>> PRÁTICA "
-			timer $X
-			echo -ne "\n>> <PAUSA> "
-			timer $Y
+			timer $X $Y
 		done
 		;;
 
 
-	-set) # SET de intervalos pré-definido ($SET_TIMES)
-		echo -e "\nSET: $SET_TIMES"
+	-set) # SET de intervalos pré-definido em $SET_TIMES
+		echo -e "\nSET: $SET_TIMES\n"
 		timer $SET_TIMES
 		;;
 
