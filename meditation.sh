@@ -1,133 +1,216 @@
 #!/bin/bash
-### meditation.sh v0.7 ~ timer para meditação
-### bcardoso @ 2010-2019
 
-### EXEMPLOS DE USO
-# ./meditation.sh           [padrão 20 minutos]
-# ./meditation.sh 15        [intervalo de 15 minutos]
-# ./meditation.sh 15 20 10  [um intervalo de 15, outro de 20 e um de 10]
-# ./meditation.sh -r 23     [repete continuamente ciclos de 23m por 5m]
-# ./meditation.sh -r 30/10  [idem, 30m por 10m]
-# ./meditation.sh -set      [rotina de tempos pré-definida]
+# meditation.sh v0.8 ~ timer para meditação
+# bcardoso @ 2010-2021
 
-### CHANGELOG
-# 2019-02-15 v0.7: valores no formato x/y como padrão (usar -r é opcional);
-# 2017-09-01 v0.6: opção -r aceita valores no formato x/y;
-# 2016-11-27 v0.5: revisão estrutural do código; suprimidas variações da opção '-set'(atualmente apenas um set padrão definido em $SET_TIMES);
-# 2016-10-01 v0.4: opção '-r $2' cria loop de '$2'm com intervalos de 5m;
-# 2016-06-29 v0.3: opção '-set' com uma série de intervalos de 4 horas;
-# 2015-02-23 v0.2: opção de usar vários tempos como argumentos;
-# 2010-07-24 v0.1: primeira versão.
+#===[ USER CONFIG ]==========================================================#
 
-#============================================================================#
-
-### DEFINIÇÕES
-
-# diretorio com arquivos de som
 BASEDIR="${HOME}/bin/meditation"
 
-# som que será tocado ao fim de cada intervalo
+# default times
+DEFAULT_TIMER=5
+DEFAULT_BREAK=2
+DEFAULT_LONGBREAK=7
+
+# pomodoro: number of breaks before a long break
+POMODOROS=7
+LONGBREAK_AFTER=3 
+
+# custom time sequence
+CUSTOM_SEQUENCE="23 5 23 5 23" # 79m focus work (~20% of an 8h work-day)
+
+# time labels
+LABEL_WORKING="WORKING"
+LABEL_BREAK="BREAK"
+LABEL_LONGBREAK="LONG BREAK"
+
+# player
+#PLAYER="cvlc --play-and-exit"
+#PLAYER="mpv --really-quiet --volume=50"
+PLAYER="mplayer -really-quiet -volume 50"
+
+# sound bell
 # bigbowl.mp3: http://www.freesound.org/samplesViewSingle.php?id=132
+#SOUND="$BASEDIR/sound/bigbowl.mp3"
 # singing-bell: https://www.freesound.org/people/ryancacophony/sounds/202017/
-#SOM="$BASEDIR/sound/bigbowl.mp3"
-#SOM="$BASEDIR/sound/singing-bell-hit2.mp3"
-SOM="$BASEDIR/sound/singing-bell-hit2-normalizado.mp3"
+#SOUND="$BASEDIR/sound/singing-bell-hit2.mp3"
+SOUND="$BASEDIR/sound/singing-bell-hit2-normalized.mp3"
 
-# player para o som
-# alternatives: "/usr/bin/cvlc --play-and-exit", "mpv --really-quiet"
-PLAYER="mplayer -really-quiet -volume 90"
 
-# intervalo padrão em minutos
-DEFAULT_TIME=23
-DEFAULT_PAUSE=5
 
-# rotina pré-definida para opção -set
-SET_TIMES="23 5 23 5 23" # 79m focus work (~20% of 8h/work-day)
+#===[ FUNCTIONS ]============================================================#
 
-#============================================================================#
-
-### FUNÇÕES
-
-# confere a validade do argumento (ie, se é um numero inteiro > 0)
-CHECK_TIME () {
-    if [ $1 -gt 0 2> /dev/null ] ; then
-	TEMPO=$1
-    else
-	# argumento é igual a zero ou não é um número
-	echo -e "Erro: \"$1\" é inválido. Definindo para $DEFAULT_TIME min.\n"
-	TEMPO=$DEFAULT_TIME
-    fi
+#  TODO: write proper help
+show_help () {
+    grep ") \#" $0 | sed -e 's/\t/\ /g;s/)\ \#/\t/g'
+    echo
+    exit
 }
 
-# conta o tempo dos intervalos e toca o sino
-TIMER () {
-    for NUM in $@ ; do
-	# confere se o $num é valido
-	CHECK_TIME $NUM
+check_num () {
+    [ $1 -gt 0 2> /dev/null ] && printf $1 || printf $2
+}
 
-	# faz a contagem do tempo
-	echo -e "[$(date +%H:%M)] $TEMPO min..."
-	sleep "$TEMPO"m
-	
-	# toca o sino ao final
-	($PLAYER $SOM & 2> /dev/null)
+plain_timer () {
+    $NOTIFY && notify-send "$2 for $1 minutes... $3"
+    printf "[$(date +%H:%M)"
+    $LABELS && print_label "$2 $3"
+    printf "]\t$1 min...\n"
+    sleep "$1" #m
+    $PLAY_SOUND && ($PLAYER $SOUND & 2> /dev/null)
+}
+
+countdown () {
+    $NOTIFY && notify-send "$2 for $1 minutes... $3"
+    clear
+    echo
+    $LABELS && print_label "$2 $3"
+    for j in $(eval echo {$1..00}) ; do
+        for i in {59..00} ; do
+            tput cup 3 4
+            printf "$j:$i "
+            if $COUNTDOWN_FILE ; then
+                printf "$2\n\n    $j:$i" > "$BASEDIR/countdown.txt"
+            fi
+            sleep 1
+        done
     done
+    $PLAY_SOUND && ($PLAYER $SOUND & 2> /dev/null)
+}
+
+print_label () {
+    bold=$(tput bold)
+    normal=$(tput sgr0)
+    printf " ${bold}$1${normal}"
 }
 
 
-#============================================================================#
 
-### MAIN
-case $1 in
-	
-    -h) # AJUDA, mostra principais opções
-	head -12 $0
-	echo -e "\$SET_TIMES = $SET_TIMES\n\$DEFAULT_TIME = $DEFAULT_TIME\n"
-	grep ") \#" $0 | sed -e 's/\t/\ /g;s/)\ \#/\t/g'
-	echo
-	;;
+#===[ OPTIONS ]==============================================================#
 
-	
-    -r) # REPETE um ciclo X/Y. ex: -r 23/5 [ou] -r 50
-	shift
-		
-	# interpreta valores no formato x/y
-	if [[ $1 == *"/"* ]]; then
-	    X=$(echo $1 | cut -d"/" -f1)
-	    Y=$(echo $1 | cut -d"/" -f2)
+# defaults (to be overwritten by command-line options)
+COUNTDOWN_STDOUT=false
+COUNTDOWN_FILE=false
+LABELS=false
+NOTIFY=false
+PLAY_SOUND=true
+POMODORO=false
+REPEAT=false
+SEQ_CUSTOM=false
 
-	# ou somente o valor principal
-	else
-	    X=$DEFAULT_TIME
-	    [ ! -z $1 ] && X=$1
-	    Y=$DEFAULT_PAUSE
-	fi
+# PARSE OPTIONS
+#  TODO: write the FILE options
+while getopts "b:hcClnpqrs" OPT; do
+    case $OPT in
+        h) show_help              ;;
+        b) SOUND="$OPTARG"        ;;
+        c) COUNTDOWN_STDOUT=true  ;;
+        C) COUNTDOWN_STDOUT=true
+           COUNTDOWN_FILE=true    ;;
+        l) LABELS=true            ;;
+        n) NOTIFY=true            ;;
+        p) POMODORO=true          ;;
+        q) PLAY_SOUND=false       ;;
+        r) REPEAT=true            ;;
+        s) SEQ_CUSTOM=true        ;;
+    esac
+done
 
-	# inicia a repetição contínua do set
-	echo -e "\nSET: ${X}m/${Y}m [oo] (^C para sair)\n"
-	while :; do
-	    TIMER $X $Y
-	done
-	;;
+# PARSE REMAINING ARGS
+shift $(expr $OPTIND - 1)
 
-
-    -s) # SET de intervalos pré-definido em $SET_TIMES
-	echo -e "\nSET: $SET_TIMES\n"
-	TIMER $SET_TIMES
-	;;
-
-
-    *) # INTERVALO padrão ($DEFAULT) [ou] ciclo X/Y [ou] N argumentos
-	if [ -z $1 ] ; then
-	    TIMER $DEFAULT
-	    
-	elif [[ $1 == *"/"* ]]; then
-	    $0 -r $1
-	    
-	else
-	    TIMER $@
-	    
-	fi
-	;;
+if $POMODORO ; then
+    TIMER=$DEFAULT_TIMER
+    BREAK=$DEFAULT_BREAK
+    LONGBREAK=$DEFAULT_LONGBREAK
+    REPEAT=false
     
-esac
+elif $SEQ_CUSTOM ; then
+    echo -e "\nCustom time sequence: $CUSTOM_SEQUENCE\n"
+    TIMER=$CUSTOM_SEQUENCE
+    REPEAT=false
+
+elif [ -z $1 ] ; then
+    TIMER=$DEFAULT_TIMER
+    
+elif [[ $1 == *"/"* ]]; then
+    # an argument formated as 'X/Y' means repetition
+    REPEAT=true  # the session will loop until user break
+    TIMER=$(check_num $(echo $1 | cut -d"/" -f1) $DEFAULT_TIMER)
+    BREAK=$(check_num $(echo $1 | cut -d"/" -f2) $DEFAULT_BREAK)
+        
+else
+    if $REPEAT ; then
+        TIMER=$(check_num $1 $DEFAULT_TIMER)
+        BREAK=$(check_num $2 $DEFAULT_BREAK)
+    else
+        TIMER=$(for t in $@ ; do
+                    check_num $t $DEFAULT_TIMER
+                    printf " "
+                done)
+    fi
+fi
+
+
+
+#===[ MAIN: TIMER ]==========================================================#
+
+# echo "> timer: $TIMER"
+# echo "> break: $BREAK"
+
+if $POMODORO ; then
+    LABEL_TMP=$LABEL_BREAK
+    for p in $(eval echo {1..$POMODOROS}) ; do
+
+        PNUMBER="$p/$POMODOROS"
+        
+        if $COUNTDOWN_STDOUT ; then
+            countdown $(( TIMER - 1 )) "$LABEL_WORKING" "$PNUMBER"
+        else
+            plain_timer $TIMER "$LABEL_WORKING" "$PNUMBER"
+        fi
+        
+        # make a long break if needed
+        if [[ $p -eq $(( LONGBREAK_AFTER + 1 )) ]] ; then
+            BREAK=$DEFAULT_LONGBREAK
+            LABEL_BREAK=$LABEL_LONGBREAK
+        else
+            BREAK=$DEFAULT_BREAK
+            LABEL_BREAK=$LABEL_TMP
+        fi
+            
+        # skip last break
+        if [[ $p -ne $POMODOROS ]] ; then
+            if $COUNTDOWN_STDOUT ; then
+                countdown $(( BREAK - 1 )) "$LABEL_BREAK" "$PNUMBER"
+            else
+                plain_timer $BREAK "$LABEL_BREAK" "$PNUMBER"
+            fi
+        fi
+    done
+    echo -e "\nDONE!\n"
+
+elif $REPEAT ; then
+    echo -e "\nSET: ${TIMER}m/${BREAK}m [oo] (^C to quit)\n"
+    while :; do
+        if $COUNTDOWN_STDOUT ; then
+            countdown $(( TIMER - 1 )) "$LABEL_WORKING"
+            countdown $(( BREAK - 1 )) "$LABEL_BREAK"
+        else
+            plain_timer $TIMER "$LABEL_WORKING"
+            plain_timer $BREAK "$LABEL_BREAK"
+        fi
+    done
+    
+else
+    echo
+    for minutes in $TIMER ; do
+        if $COUNTDOWN_STDOUT ; then
+            countdown $(( minutes - 1 ))
+        else
+            plain_timer $minutes "\b"
+        fi
+    done
+    echo
+fi
+
