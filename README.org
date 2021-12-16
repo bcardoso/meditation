@@ -1,0 +1,32 @@
+* meditation.sh
+
+Flexible timer for meditation, working sessions & pomodoros.
+
+#+begin_src
+USAGE:
+
+    meditation.sh [OPTIONS] [<intervals>]
+
+OPTIONS:
+
+    -h    help
+    -b    "/path/to/bell-sound.mp3"
+    -c    countdown timer mode
+    -C    write countdown state to file (-c is implied)
+    -l    show interval labels
+    -n    send notification on interval changes
+    -p    pomodoro technique
+    -q    quiet, no bell sound on interval changes
+    -r    repeat forever (same as 'X/Y')
+    -s    use a predefined interval sequence
+
+
+EXAMPLES:
+
+  meditation.sh             default interval is 5 minutes
+  meditation.sh 2 3 5       set timer to 2, 3 and 5 minutes
+  meditation.sh 23/5        loop for 23 and 5 minutes (same as '-r 23 5')
+  meditation.sh -nl 23/5    same, with interval labels and notifications
+  meditation.sh -p          start a pomodoro session
+  meditation.sh -s          predefined interval sequence ('23 5 23 5 23')
+#+end_src
