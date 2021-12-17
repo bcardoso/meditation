@@ -2,6 +2,24 @@
 
 Flexible timer for meditation, working sessions & pomodoros.
 
+** Installation
+
+#+begin_src bash
+mkdir -p "$HOME/bin"
+git clone https://github.com/bcardoso/meditation -O "$HOME/bin/meditation"
+chmod +x "$HOME/bin/meditation/meditation.sh"
+
+# alias suggestion
+echo "alias m='$HOME/bin/meditation/meditation.sh'" >> "$HOME/.bash_aliases"
+
+# you might want to include the options you use the most
+echo "alias m='$HOME/bin/meditation/meditation.sh -ln'" >> "$HOME/.bash_aliases"
+echo "alias p='$HOME/bin/meditation/meditation.sh -lp'" >> "$HOME/.bash_aliases"
+#+end_src
+
+If you want to clone this repo to another location, remember to edit the =BASEDIR= variable in the =meditation.sh= file accordingly. Default time intervals and labels can also be set there.
+
+** Usage
 #+begin_src
 USAGE:
 
@@ -23,10 +41,11 @@ OPTIONS:
 
 EXAMPLES:
 
-  meditation.sh             default interval is 5 minutes
+  meditation.sh             default interval is 25 minutes
   meditation.sh 2 3 5       set timer to 2, 3 and 5 minutes
   meditation.sh 23/5        loop for 23 and 5 minutes (same as '-r 23 5')
   meditation.sh -nl 23/5    same, with interval labels and notifications
   meditation.sh -p          start a pomodoro session
   meditation.sh -s          predefined interval sequence ('23 5 23 5 23')
 #+end_src
+
