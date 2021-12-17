@@ -11,26 +11,26 @@ version="0.8"
 BASEDIR="${HOME}/bin/meditation"
 
 # default time intervals
-DEFAULT_TIMER=5
-DEFAULT_BREAK=2
-DEFAULT_LONGBREAK=7
+DEFAULT_TIMER=25
+DEFAULT_BREAK=5
+DEFAULT_LONGBREAK=15
 
-# pomodoro: number of breaks before a long break
-POMODOROS=7
-LONGBREAK_AFTER=3
+# pomodoro session
+POMODOROS=7        # each POMODORO equals to $DEFAULT_TIMER + $DEFAULT_BREAK
+LONGBREAK_AFTER=3  # number of default breaks before a long break
 
 # a predefined time sequence
 DEFAULT_SEQUENCE="23 5 23 5 23" # 79m focus work (~20% of an 8h work-day)
 
-# time labels
+# interval labels
 LABEL_WORKING="WORKING"
 LABEL_BREAK="BREAK"
 LABEL_LONGBREAK="LONG BREAK"
 
 # player
 #PLAYER="cvlc --play-and-exit"
-#PLAYER="mpv --really-quiet --volume=50"
-PLAYER="mplayer -really-quiet -volume 50"
+#PLAYER="mplayer -really-quiet -volume 50"
+PLAYER="mpv --really-quiet --vo=null --volume=50"
 
 # sound bell
 # bigbowl.mp3: http://www.freesound.org/samplesViewSingle.php?id=132
@@ -69,7 +69,7 @@ plain_timer () {
     printf "[$(date +%H:%M)"
     $LABELS && print_label "$2" "$3"
     printf "]\t$1 min...\n"
-    sleep "$1" #m
+    sleep "$1"m
     $PLAY_SOUND && ($PLAYER $SOUND & 2> /dev/null)
 }
 
@@ -81,13 +81,14 @@ countdown () {
     for j in $(eval echo {$1..00}) ; do
         for i in {59..00} ; do
             tput cup 3 4
-            printf "$j:$i "
+            printf "$j:$i   "
             if $COUNTDOWN_FILE ; then
                 printf "$2\n\n    $j:$i" > "$BASEDIR/countdown.txt"
             fi
             sleep 1
         done
     done
+    echo
     $PLAY_SOUND && ($PLAYER $SOUND & 2> /dev/null)
 }
 
@@ -111,7 +112,7 @@ print_label () {
 
 #===[ OPTIONS ]==============================================================#
 
-# defaults (to be overwritten by command-line options)
+# defaults to be overwritten by command-line options
 COUNTDOWN_STDOUT=false
 COUNTDOWN_FILE=false
 LABELS=false
@@ -158,7 +159,7 @@ if $POMODORO ; then
     REPEAT=false
 
 elif $PREDEF_SEQ ; then
-    echo -e "\nCustom time sequence: $DEFAULT_SEQUENCE\n"
+    echo -e "\nPredefined time sequence: $DEFAULT_SEQUENCE\n"
     TIMER=$DEFAULT_SEQUENCE
     REPEAT=false
 
@@ -166,7 +167,7 @@ elif [ -z $1 ] ; then
     TIMER=$DEFAULT_TIMER
 
 elif [[ $1 == *"/"* ]]; then
-    # an argument formated as 'X/Y' means repetition
+    # an argument formatted as 'X/Y' means repetition
     REPEAT=true  # the session will loop until user break
     TIMER=$(check_num $(echo $1 | cut -d"/" -f1) $DEFAULT_TIMER)
     BREAK=$(check_num $(echo $1 | cut -d"/" -f2) $DEFAULT_BREAK)
@@ -186,9 +187,6 @@ fi
 
 
 #===[ MAIN: TIMER ]==========================================================#
-
-# echo "> timer: $TIMER"
-# echo "> break: $BREAK"
 
 if $POMODORO ; then
     LABEL_TMP=$LABEL_BREAK
