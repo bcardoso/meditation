@@ -5,8 +5,7 @@ Flexible timer for meditation, working sessions & pomodoros.
 ** Installation
 
 #+begin_src bash
-mkdir -p "$HOME/bin"
-git clone https://github.com/bcardoso/meditation -O "$HOME/bin/meditation"
+git clone https://github.com/bcardoso/meditation "$HOME/bin/meditation"
 chmod +x "$HOME/bin/meditation/meditation.sh"
 
 # alias suggestion
