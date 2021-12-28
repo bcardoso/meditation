@@ -54,8 +54,8 @@ show_help () {
     echo -e "   $(basename $0) 2 3 5    \tset timer to 2, 3 and 5 minutes"
     echo -e "   $(basename $0) 23/5     \tloop for 23 and 5 minutes (same as '-r 23 5')"
     echo -e "   $(basename $0) -nl 23/5 \tsame, with interval labels and notifications"
-    echo -e "   $(basename $0) -p       \tstart a pomodoro session"
     echo -e "   $(basename $0) -s       \tpredefined interval sequence ('$DEFAULT_SEQUENCE')"
+    echo -e "   $(basename $0) -p       \tstart a pomodoro session; to define custom intervals:\n\t\t -p <sessions> <timer> <break> <longbreak> <longbreak_after>"
     echo
     exit
 }
@@ -126,26 +126,41 @@ PREDEF_SEQ=false
 while getopts "b:hcClnpqrs" OPT; do
     case $OPT in
         h) ## help
-            show_help              ;;
+            show_help
+            ;;
         b) ## "/path/to/bell-sound.mp3"
-            SOUND="$OPTARG"        ;;
+            SOUND="$OPTARG"
+            ;;
         c) ## countdown timer mode
-            COUNTDOWN_STDOUT=true  ;;
+            COUNTDOWN_STDOUT=true
+            ;;
         C) ## write countdown state to file (-c is implied)
             COUNTDOWN_STDOUT=true
-            COUNTDOWN_FILE=true    ;;
+            COUNTDOWN_FILE=true
+            ;;
         l) ## show interval labels
-            LABELS=true            ;;
+            LABELS=true
+            ;;
         n) ## send notification on interval changes
-            NOTIFY=true            ;;
+            NOTIFY=true
+            ;;
         p) ## pomodoro technique
-            POMODORO=true          ;;
+            POMODOROS=$(check_num $2 $POMODOROS)
+            DEFAULT_TIMER=$(check_num $3 $DEFAULT_TIMER)
+            DEFAULT_BREAK=$(check_num $4 $DEFAULT_BREAK)
+            DEFAULT_LONGBREAK=$(check_num $5 $DEFAULT_LONGBREAK)
+            LONGBREAK_AFTER=$(check_num $6 $LONGBREAK_AFTER)
+            POMODORO=true
+            ;;
         q) ## quiet, no bell sound on interval changes
-            PLAY_SOUND=false       ;;
+            PLAY_SOUND=false
+            ;;
         r) ## repeat forever (same as 'X/Y')
-            REPEAT=true            ;;
+            REPEAT=true
+            ;;
         s) ## use a predefined interval sequence
-            PREDEF_SEQ=true        ;;
+            PREDEF_SEQ=true
+            ;;
     esac
 done
 
@@ -189,6 +204,7 @@ fi
 #===[ MAIN: TIMER ]==========================================================#
 
 if $POMODORO ; then
+    echo
     LABEL_TMP=$LABEL_BREAK
     for p in $(eval echo {1..$POMODOROS}) ; do
 
