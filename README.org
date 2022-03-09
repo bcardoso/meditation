@@ -12,8 +12,8 @@ chmod +x "$HOME/bin/meditation/meditation.sh"
 echo "alias m='$HOME/bin/meditation/meditation.sh'" >> "$HOME/.bash_aliases"
 
 # you might want to include the options you use the most
-echo "alias m='$HOME/bin/meditation/meditation.sh -ln'" >> "$HOME/.bash_aliases"
-echo "alias p='$HOME/bin/meditation/meditation.sh -lp'" >> "$HOME/.bash_aliases"
+echo "alias m='$HOME/bin/meditation/meditation.sh -l'" >> "$HOME/.bashrc"
+echo "alias p='$HOME/bin/meditation/meditation.sh -lpn'" >> "$HOME/.bashrc"
 #+end_src
 
 If you want to clone this repo to another location, remember to edit the =BASEDIR= variable in the =meditation.sh= file accordingly. Default time intervals and labels can also be set there.
